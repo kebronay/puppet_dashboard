@@ -1,0 +1,22 @@
+Monitoring
+For the monitoring of Servers
+The use of FAN Fully Automated Nagios
+Linux, AIX, Unix -> nagios with ssh or snmp queries.
+Windows -> nagios with wmi_plus.pl, wmic, winexe or snmp queries.
+Switches, Routers -> nagios with snmp queries.
+Basically, nagios with a web page over the top for configuration purposes.
+Can be configured as All in One system or Split into a multinode system.
+I have used it both as All in One. 
+I have used it as a split system.
+Database Server - MySQL server, stores configuration and current status of Hosts and Services.
+Poller Server - executes scripts against the remote hosts to gather information about them.
+Central Server - web server, graphing server(rrd), stores historic data in rrd files, receives all results from pollers and sends results to database server.
+Reporting, Dashboards
+There are some built in reports and dashboards in FAN.  
+But, you can come up with some elaborate reporting/dashboards using MySql queries and use rrdtool for graphing.
+
+Checks,
+For windows, rely firstly on the check_wmi_plus.pl software for it's built in ability to monitor windows servers.
+Documentation already inside FAN, run this.  /usr/lib64/nagios/plugins/check_wmi_plus.pl
+It will spit back a HEAP of options of how to use it.
+
