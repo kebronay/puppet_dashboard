@@ -1,0 +1,202 @@
+AWS Lamp Template
+{
+VERSION INFORMATION - Specific to AWS
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  
+  "Description" : "AWS CloudFormation Sample Template LAMP_Single_Instance: Create a LAMP stack using a single EC2 instance and a local MySQL database for storage. This template demonstrates using the AWS CloudFormation bootstrap scripts to install the packages and files necessary to deploy the Apache web server, PHP and MySQL at instance launch time. **WARNING** This template creates an Amazon EC2 instance. You will be billed for the AWS resources used if you create a stack from this template.",
+  
+THESE ARE PROMPTS FOR THE END USER
+  "Parameters" : {
+      
+    "DBRootPassword": {
+      "NoEcho": "true",
+      "Description" : "Root password for MySQL",
+      "Default" : "admin",
+      "Type": "String",
+      "MinLength": "1",
+      "MaxLength": "41",
+      "AllowedPattern" : "[a-zA-Z0-9]*",
+      "ConstraintDescription" : "must contain only alphanumeric characters."
+    },
+
+    "InstanceType" : {
+      "Description" : "WebServer EC2 instance type",
+      "Type" : "String",
+      "Default" : "t1.micro",
+      "AllowedValues" : [ "t1.micro","m1.small","m1.medium","m1.large","m1.xlarge","m2.xlarge","m2.2xlarge","m2.4xlarge","m3.xlarge","m3.2xlarge","c1.medium","c1.xlarge","cc1.4xlarge","cc2.8xlarge","cg1.4xlarge"],
+      "ConstraintDescription" : "must be a valid EC2 instance type."
+    }
+  },
+
+THESE MAP USER SELECTIONS FROM ABOVE TO REAL VALUES THAT AWS UNDERSTANDS  
+  "Mappings" : {
+    "AWSInstanceType2Arch" : {
+      "t1.micro"    : { "Arch" : "64" },
+      "m1.small"    : { "Arch" : "64" },
+      "m1.medium"   : { "Arch" : "64" },
+      "m1.large"    : { "Arch" : "64" },
+      "m1.xlarge"   : { "Arch" : "64" },
+      "m2.xlarge"   : { "Arch" : "64" },
+      "m2.2xlarge"  : { "Arch" : "64" },
+      "m2.4xlarge"  : { "Arch" : "64" },
+      "m3.xlarge"   : { "Arch" : "64" },
+      "m3.2xlarge"  : { "Arch" : "64" },
+      "c1.medium"   : { "Arch" : "64" },
+      "c1.xlarge"   : { "Arch" : "64" },
+      "cc1.4xlarge" : { "Arch" : "64HVM" },
+      "cc2.8xlarge" : { "Arch" : "64HVM" },
+      "cg1.4xlarge" : { "Arch" : "64HVM" }
+    },
+
+    "AWSRegionArch2AMI" : {
+      "us-east-1"      : { "32" : "ami-31814f58", "64" : "ami-1b814f72", "64HVM" : "ami-0da96764" },
+      "us-west-2"      : { "32" : "ami-38fe7308", "64" : "ami-30fe7300", "64HVM" : "NOT_YET_SUPPORTED" },
+      "us-west-1"      : { "32" : "ami-11d68a54", "64" : "ami-1bd68a5e", "64HVM" : "NOT_YET_SUPPORTED" },
+      "eu-west-1"      : { "32" : "ami-973b06e3", "64" : "ami-953b06e1", "64HVM" : "NOT_YET_SUPPORTED" },
+      "ap-southeast-1" : { "32" : "ami-b4b0cae6", "64" : "ami-beb0caec", "64HVM" : "NOT_YET_SUPPORTED" },
+      "ap-southeast-2" : { "32" : "ami-b3990e89", "64" : "ami-bd990e87", "64HVM" : "NOT_YET_SUPPORTED" },
+      "ap-northeast-1" : { "32" : "ami-0644f007", "64" : "ami-0a44f00b", "64HVM" : "NOT_YET_SUPPORTED" },
+      "sa-east-1"      : { "32" : "ami-3e3be423", "64" : "ami-3c3be421", "64HVM" : "NOT_YET_SUPPORTED" }
+    }
+  },
+
+THESE RESOURCES ARE USED TO SET UP A USER IN AWS TO BUILD THE MACHINE WITH    
+  "Resources" : {     
+      
+    "CfnUser" : {
+      "Type" : "AWS::IAM::User",
+      "Properties" : {
+        "Path": "/",
+        "Policies": [{
+          "PolicyName": "root",
+          "PolicyDocument": { "Statement":[{
+            "Effect":"Allow",
+            "Action":"cloudformation:DescribeStackResource",
+            "Resource":"*"
+          }]}
+        }]
+      }
+    },
+
+NAME OUR MACHINES FOR EASIER READING
+    "WebServer": {  
+      "Type": "AWS::EC2::Instance",
+      "Metadata" : {
+        "Comment1" : "Configure the bootstrap helpers to install the Apache Web Server and PHP",
+        "Comment2" : "The website content is downloaded from the CloudFormationPHPSample.zip file",
+
+WHAT TO RUN TO INITIALIZE OUR SERVER ON FIRST BOOT
+        "AWS::CloudFormation::Init" : {
+          "config" : {
+            "packages" : {
+SPECIFY YOUR PACKAGE MANAGER AND WHAT PACKAGES TO INSTALL
+              "yum" : {
+                "mysql"        : [],
+                "mysql-server" : [],
+                "mysql-libs"   : [],
+                "httpd"        : [],
+                "php"          : [],
+                "php-mysql"    : []
+              }
+            },
+
+FILES TO DOWNLOAD FROM THE INTERNET AND SAVE LOCALLY
+            "sources" : {
+              "/var/www/html" : "https://s3-ap-southeast-2.amazonaws.com/lampsetup/entries.zip"
+     },
+
+THIS ONE HAS PERMISSIONS
+     "files" : {
+       "/tmp/setup.sql" : {
+ "source" : "https://s3-ap-southeast-2.amazonaws.com/lampsetup/setup.sql",
+ "mode" : "000777",
+ "owner" : "root",
+ "group" : "root"
+ }
+            },
+
+WHAT SERVICES TO ENABLE ON THE SERVER
+            "services" : {
+              "sysvinit" : {  
+                "mysqld" : {
+                  "enabled"       : "true",
+                  "ensureRunning" : "true"                
+                },
+                "httpd" : {
+                  "enabled"       : "true",
+                  "ensureRunning" : "true"                
+                }
+              }
+            }
+          }
+        }
+      },
+      "Properties": {
+        "ImageId" : { "Fn::FindInMap" : [ "AWSRegionArch2AMI", { "Ref" : "AWS::Region" },
+                          { "Fn::FindInMap" : [ "AWSInstanceType2Arch", { "Ref" : "InstanceType" }, "Arch" ] } ] },
+        "InstanceType"   : { "Ref" : "InstanceType" },
+        "SecurityGroups" : [ {"Ref" : "WebServerSecurityGroup"} ],
+        "UserData"       : { "Fn::Base64" : { "Fn::Join" : ["", [
+          "#!/bin/bash -v\n",
+          "yum update -y aws-cfn-bootstrap\n",
+
+          "# Helper function\n",
+          "function error_exit\n",
+          "{\n",
+          "  /opt/aws/bin/cfn-signal -e 1 -r \"$1\" '", { "Ref" : "WaitHandle" }, "'\n",
+          "  exit 1\n",
+          "}\n",
+
+          "# Install LAMP packages\n",
+          "/opt/aws/bin/cfn-init -s ", { "Ref" : "AWS::StackId" }, " -r WebServer ",
+   "    --region ", { "Ref" : "AWS::Region" }, " || error_exit 'Failed to run cfn-init'\n",
+
+MY OWN SCRIPTS TO EXECUTE AFTER THE ABOVE NORMAL AWS SCRIPTS
+          "# Setup MySQL, create a user and a database\n",
+          "mysqladmin -u root password '", { "Ref" : "DBRootPassword" }, "' || error_exit 'Failed to initialize root password'\n",
+          "mysql -u root --password='", { "Ref" : "DBRootPassword" }, "' < /tmp/setup.sql || error_exit 'Failed to initialize database'\n",
+
+          "# All is well so signal success\n",
+          "/opt/aws/bin/cfn-signal -e 0 -r \"LAMP Stack setup complete\" '", { "Ref" : "WaitHandle" }, "'\n"
+        ]]}}        
+      }
+    },
+
+    "WaitHandle" : {
+      "Type" : "AWS::CloudFormation::WaitConditionHandle"
+    },
+
+    "WaitCondition" : {
+      "Type" : "AWS::CloudFormation::WaitCondition",
+      "DependsOn" : "WebServer",
+      "Properties" : {
+        "Handle" : {"Ref" : "WaitHandle"},
+        "Timeout" : "300"
+      }
+    },
+
+FIREWALL SETTINGS ON AWS INFRASTRUCTURE (NOT LOCAL TO THIS MACHINE, BUT THIS MACHINE MUST GO THROUGH THIS FIREWALL)    
+    "WebServerSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Enable HTTP access via port 80 and 22",
+        "SecurityGroupIngress" : [
+          {"IpProtocol" : "tcp", "FromPort" : "80", "ToPort" : "80", "CidrIp" : "0.0.0.0/0"},
+          {"IpProtocol" : "tcp", "FromPort" : "3306", "ToPort" : "3306", "CidrIp" : "0.0.0.0/0"},
+          {"IpProtocol" : "tcp", "FromPort" : "22", "ToPort" : "22", "CidrIp" : "0.0.0.0/0"}
+        ]
+      }      
+    }          
+  },
+
+A URL TO DISPLAY INSIDE THE AWS CONSOLE.  USUALLY THE URL OF YOUR WEBSERVER
+  "Outputs" : {
+    "WebsiteURL" : {
+IN THIS CASE MY URL WAS MY LOCAL DNS NAME WITH /ENTRIES ADDED TO IT
+      "Value" : { "Fn::Join" : ["", ["http://", { "Fn::GetAtt" : [ "WebServer", "PublicDnsName" ]}, "/entries"]] },
+      "Description" : "URL for newly created LAMP stack"
+    }
+  }
+}
+
