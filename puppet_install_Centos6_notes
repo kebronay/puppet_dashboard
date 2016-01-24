@@ -1,0 +1,55 @@
+#Install MySQL Server
+======================
+The puppet dashboard stores data in a mysql database, so lets install it, start it and set a root mysql password. Here we’re using “XXXXXXX(chose pass)” for the password.
+
+yum -y install mysql-server
+/etc/init.d/mysqld start
+/usr/bin/mysqladmin -u root password 'XXXXXXX(chose pass)'
+Create database for puppet dashboard
+We’ll create a database called puppetdash and a user called puppdash with a password of XXXXXXX(chose pass) to connect to it.
+
+echo "create database puppetdash;" | mysql -uroot -pXXXXXXX(chose pass)
+echo "grant all on puppetdash.* to puppdash@localhost identified by 'XXXXXXX(chose pass)';" | mysql -uroot -pXXXXXXX(chose pass)
+echo "flush privileges;" | mysql -uroot -pXXXXXXX(chose pass)
+# install puppetlabs repo
+
+rpm -ivhhttp://yum.puppetlabs.com/el/6/products/x86_64/puppetlabs-release-6-1.noarch.rpm
+# install dashboard from yum now
+
+yum -y install puppet-dashboard
+cp /usr/share/puppet-dashboard/config/settings.yml.example /usr/share/puppet-dashboard/config/settings.yml
+nano -w /usr/share/puppet-dashboard/config/database.yml
+Make the whole file look like this
+
+production:
+  database: puppetdash         
+  username: puppdash
+  password: XXXXXXX(chose pass)
+  encoding: utf8
+  adapter: mysql
+development:
+  database: puppetdash         
+  username: puppdash
+  password: XXXXXXX(chose pass)
+  encoding: utf8
+  adapter: mysql
+cd /usr/share/puppet-dashboard
+rake db:migrate
+/etc/init.d/puppet-dashboard start
+# add reporting to puppet.conf
+
+echo "    report = true" >> /etc/puppet/puppet.conf
+echo "" >> /etc/puppet/puppet.conf
+echo "[master]" >> /etc/puppet/puppet.conf
+echo "    reports = store, http" >> /etc/puppet/puppet.conf
+echo "    reporturl = http://x.x.x.x(ec2 publicDNS):3000/reports/upload" >> /etc/puppet/puppet.conf
+Run puppet manually
+We run puppet manually to make sure it sends a report to the dashboard.
+
+puppetd -t
+chown puppet-dashboard /usr/share/puppet-dashboard/log/
+/sbin/chkconfig puppet-dashboard on
+/sbin/chkconfig puppet-dashboard-workers on
+/sbin/chkconfig mysqld on
+/etc/init.d/puppet-dashboard restart
+/etc/init.d/puppet-dashboard-workers restart
