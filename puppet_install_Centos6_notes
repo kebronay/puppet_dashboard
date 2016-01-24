@@ -18,7 +18,7 @@ rpm -ivhhttp://yum.puppetlabs.com/el/6/products/x86_64/puppetlabs-release-6-1.no
 
 yum -y install puppet-dashboard
 cp /usr/share/puppet-dashboard/config/settings.yml.example /usr/share/puppet-dashboard/config/settings.yml
-nano -w /usr/share/puppet-dashboard/config/database.yml
+vi  /usr/share/puppet-dashboard/config/database.yml
 Make the whole file look like this
 
 production:
