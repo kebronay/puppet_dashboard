@@ -1,0 +1,6 @@
+Install jenkins on Solaris 11:
+=============================
+pkgadd -d http://get.opencsw.org/now
+/opt/csw/bin/pkgutil -U
+/opt/csw/bin/pkgutil -y -i jenkins 
+/usr/sbin/pkgchk -L CSWjenkins # list files
