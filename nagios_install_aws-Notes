@@ -1,0 +1,143 @@
+nagios
+PHP script for building Nagios configuration
+
+<?php
+// ASK AWS to List all your Instances, output to a text file. (It will be a JSON file).
+        $getInstancesCommand = 'aws ec2 describe-instances > /tmp/ec2-instances.json';
+        system($getInstancesCommand);
+
+        $ec2Json = file_get_contents('/tmp/ec2-instances.json');
+//      var_dump($ec2Json);
+// DECODE the JSON into something usable. (PHP Object)
+        $ec2Data = json_decode($ec2Json, true);
+//      var_dump($ec2Data);
+        $reservations = $ec2Data['Reservations'];
+//      var_dump($reservations);
+
+// Get Network Interfaces from JSON.
+function getNetworkInterfaces ($instance) {
+        $interfaces = array();
+
+
+        $tmpInts = $instance['NetworkInterfaces'];
+//      var_dump($tmpInts);
+
+        foreach($tmpInts as $tmpInt) {
+                $interface;
+                $privateIp = $tmpInt['PrivateIpAddress'];
+                $ipBits = explode(".", $privateIp);
+                $lastIp = array_pop($ipBits);
+                $interface->name = 'eth-'.sprintf("%03d", $lastIp);
+                $interface->ip = $privateIp;
+                array_push($interfaces, $interface);
+                unset($interface);
+        }
+
+        return $interfaces;
+}
+
+// CREATE a HOST monitoring entry for NAGIOS
+function buildHost ($host, $ip) {
+//      define host{
+//        use                     linux-server            ; Name of host template to use
+//                                                        ; This host definition will inherit all variables that are defined
+//                                                        ; in (or inherited by) the linux-server host template definition.
+//        host_name               dev.k9entries.com
+//        alias                   dev
+//        address                 dev.k9entries.com
+//        }
+        $result = "define host{\n";
+        $result .= "\tuse\tlinux-server\n";
+        $result .= "\thost_name\t$host\n";
+        $result .= "\talias\t$host\n";
+        $result .= "\taddress\t$ip\n";
+        $result .= "}\n";
+        return $result;
+}
+
+
+        $instancesToMonitor = array();
+        $HostsToMonitor = array();
+        $HostsToMonitorAll = array();
+        foreach($reservations as $reservation) {
+//              var_dump($reservation);
+                $instances = $reservation['Instances'];
+                foreach($instances as $instance) {
+//                      var_dump($instance);
+                        $tags = $instance['Tags'];
+//                      var_dump($tags);
+                        $instanceName = "unknown";
+                        foreach($tags as $tag) {
+                                $key = $tag['Key'];
+                                $value = $tag['Value'];
+                                if($key == 'Name') {
+                                        $instanceName = $value;
+                                }
+                        }
+                        foreach($tags as $tag) {
+//                              var_dump($tag);
+                                $key = $tag['Key'];
+                                $value = $tag['Value'];
+                                if($key == 'Nagios') {
+//                                      var_dump($tag);
+                                        $instancesToMonitor[$instanceName]=$instance;
+                                }
+                        }
+                }
+//              exit;
+        }
+        foreach(array_keys($instancesToMonitor) as $instanceName) {
+                $instance = $instancesToMonitor[$instanceName];
+//              var_dump($instance);
+                $ints = getNetworkInterfaces($instance);
+                foreach($ints as $int) {
+//                      var_dump($int);
+                        $hostname = $instanceName."-".$int->name;
+                        $HostsToMonitor[$hostname] = $int->ip;
+                        $HostsToMonitorAll[$hostname] = $int->ip;
+                }
+        }
+        $HostsToMonitor['www.k9entries.com'] = 'www.k9entries.com';
+        $HostsToMonitor['www.k9membership.com'] = 'www.k9membership.com';
+        $HostsToMonitor['dev.k9entries.com'] = 'dev.k9entries.com';
+        $HostsToMonitor['dev.k9membership.com'] = 'dev.k9membership.com';
+        foreach(array_keys($HostsToMonitor) as $hostname) {
+                $ip = $HostsToMonitor[$hostname];
+//              print($hostname."->".$ip."\n");
+                $hostData = buildHost($hostname, $ip);
+                print($hostData);
+        }
+
+
+
+print("define service{\n");
+print("\tuse                             local-service         ; Name of service template to use\n");
+print("\thost_name                       localhost, ".implode(", ", array_keys($HostsToMonitor))."\n");
+print("\tservice_description             SSH\n");
+print("\tcheck_command                   check_ssh\n");
+print("\tnotifications_enabled           0\n");
+print("\t}\n");
+print("define service{\n");
+print("\tuse                             local-service         ; Name of service template to use\n");
+print("\thost_name                       localhost, ".implode(", ", array_keys($HostsToMonitor))."\n");
+print("\tservice_description             HTTP\n");
+print("\tcheck_command                   check_http\n");
+print("\tnotifications_enabled           0\n");
+print("\t}\n");
+
+print("define service{\n");
+print("\tuse                             local-service         ; Name of service template to use\n");
+print("\thost_name                       localhost, ".implode(", ", array_keys($HostsToMonitor))."\n");
+print("\tservice_description             HTTPS\n");
+print("\tcheck_command                   check_https\n");
+print("\tnotifications_enabled           0\n");
+print("\t}\n");
+
+print("define service{\n");
+print("\tuse                             local-service         ; Name of service template to use\n");
+print("\thost_name                       localhost, ".implode(", ", array_keys($HostsToMonitorAll))."\n");
+print("\tservice_description             MySQL\n");
+print("\tcheck_command                   check_tcp!3306\n");
+print("\tnotifications_enabled           0\n");
+print("\t}\n");
+?>
