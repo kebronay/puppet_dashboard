@@ -1,4 +1,4 @@
-nagios
+nagios Install 
 PHP script for building Nagios configuration
 
 <?php
