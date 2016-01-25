@@ -42,9 +42,9 @@ function buildHost ($host, $ip) {
 //        use                     linux-server            ; Name of host template to use
 //                                                        ; This host definition will inherit all variables that are defined
 //                                                        ; in (or inherited by) the linux-server host template definition.
-//        host_name               dev.k9entries.com
+//        host_name               puppet.mylab.local
 //        alias                   dev
-//        address                 dev.k9entries.com
+//        address                 puppet.mylab.local
 //        }
         $result = "define host{\n";
         $result .= "\tuse\tlinux-server\n";
@@ -97,10 +97,10 @@ function buildHost ($host, $ip) {
                         $HostsToMonitorAll[$hostname] = $int->ip;
                 }
         }
-        $HostsToMonitor['www.k9entries.com'] = 'www.k9entries.com';
-        $HostsToMonitor['www.k9membership.com'] = 'www.k9membership.com';
-        $HostsToMonitor['dev.k9entries.com'] = 'dev.k9entries.com';
-        $HostsToMonitor['dev.k9membership.com'] = 'dev.k9membership.com';
+        $HostsToMonitor['puppet.mylab.local'] = 'puppet.mylab.local';
+        $HostsToMonitor['puppet.mylab.local'] = 'puppet.mylab.local';
+        $HostsToMonitor['puppet.mylab.local'] = 'puppet.mylab.local';
+        $HostsToMonitor['puppet.mylab.local'] = 'puppet.mylab.local';
         foreach(array_keys($HostsToMonitor) as $hostname) {
                 $ip = $HostsToMonitor[$hostname];
 //              print($hostname."->".$ip."\n");
